@@ -12,35 +12,65 @@
 ## GNU General Public License at (http://www.gnu.org/licenses/) for
 ## more details.
 
+
+
 fupdate()						# Update the PIA openvpn files.
 {
-	CONFIGDEFAULT="https://www.privateinternetaccess.com/openvpn/openvpn.zip"
-	CONFIGSTRONG="https://www.privateinternetaccess.com/openvpn/openvpn-strong.zip"
-	CONFIGIP="https://www.privateinternetaccess.com/openvpn/openvpn-ip.zip"
-	CONFIGTCP="https://www.privateinternetaccess.com/openvpn/openvpn-tcp.zip"
-	CONFIGTCPSTRONG="https://www.privateinternetaccess.com/openvpn/openvpn-strong-tcp.zip"
+	###  LOCAL DECLARATIONS
+	##
+	#
 
+	# list of the available servers connection protocols
+	Protocols=(
+		"Default UDP (aes-128-cbc sha1 rsa-2048)"
+		"Strong UDP (aes-256-cbc sha256 rsa-4096)"
+		"Direct IP (aes-128-cbc sha1 rsa-2048)"
+		"Default TCP (aes-128-cbc sha1 rsa-2048)"
+		"Strong TCP (aes-256-cbc sha256 rsa-4096)"
+	)
+	# list of their related archives
+	Url="https://www.privateinternetaccess.com/openvpn"
+	Url_zip=(
+		"$Url/openvpn.zip"
+		"$Url/openvpn-strong.zip"
+		"$Url/openvpn-ip.zip"
+		"$Url/openvpn-tcp.zip"
+		"$Url/openvpn-strong-tcp.zip"
+	)
+
+	### MAIN
+	##
+	#
+
+	printf "$PROMPT $BOLD%s$RESET\n" "Server configuration update"
+
+	# Ask for protocol to use if not set yet
 	if [ $CONFIGNUM -eq 0 ];then
-		echo "$PROMPT Please choose configuration:"
-		echo " $BOLD$RED[$RESET""1""$BOLD$RED]$RESET Default UDP (aes-128-cbc sha1 rsa-2048)"
-		echo " $BOLD$RED[$RESET""2""$BOLD$RED]$RESET Strong UDP (aes-256-cbc sha256 rsa-4096)"
-		echo " $BOLD$RED[$RESET""3""$BOLD$RED]$RESET Direct IP (aes-128-cbc sha1 rsa-2048)"
-		echo " $BOLD$RED[$RESET""4""$BOLD$RED]$RESET Default TCP (aes-128-cbc sha1 rsa-2048)"
-		echo " $BOLD$RED[$RESET""5""$BOLD$RED]$RESET Strong TCP (aes-256-cbc sha256 rsa-4096)"
-		read -p "$PROMPT " CONFIGNUM
-	fi
+		printf "$PROMPT %s\n" "Please choose configuration:"
 
-	if [[ $CONFIGNUM =~ ^[0-9]+$ && $CONFIGNUM -lt 6 && $CONFIGNUM -gt 0 ]];then
-		case $CONFIGNUM in
-			1) DOWNURL=$CONFIGDEFAULT;echo "$INFO Selected Default UDP configuration.";;
-			2) DOWNURL=$CONFIGSTRONG;echo "$INFO Selected Strong UDP configuration.";;
-			3) DOWNURL=$CONFIGIP;echo "$INFO Selected Direct IP configuration.";;
-			4) DOWNURL=$CONFIGTCP;echo "$INFO Selected Default TCP configuration.";;
-			5) DOWNURL=$CONFIGTCPSTRONG;echo "$INFO Selected Strong TCP configuration.";;
-		esac
-	else
-		echo "$ERROR $CONFIGNUM is not a valid option! 1-5 only."
-		exit 1
+		# Display options menu
+		Format=" $BOLD$RED[$RESET%d$BOLD$RED]$RESET %s\n"
+		for i in ${!Protocols[@]}; do
+			# for convenience, displayed index starts from number 1
+			printf "$Format" "$((i+1))" "${Protocols[$i]}"
+		done
+
+		# Prompt for user choice
+		while true; do
+			read -p "$PROMPT " CONFIGNUM
+			size=${#Protocols[@]}
+			last_index=$(( size - 1 ))
+
+			if [[ $CONFIGNUM =~ ^[0-9]$ ]] ; then
+				index=$((CONFIGNUM-1))
+				if  (( index >= 0 )) && (( index <= last_index )); then
+					DOWNURL=${Url_zip[index]}
+					printf "$INFO Selected %s.\n" "${Protocols[$index]}"
+					break
+				fi
+			fi
+			printf "$ERROR $CONFIGNUM is not a valid option! 1-%d only.\n" "${#Protocols[@]}"
+		done
 	fi
 
 	printf "$PROMPT Updating PIA openvpn files...\n"
