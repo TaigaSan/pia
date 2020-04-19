@@ -681,6 +681,28 @@ f_check_dependencies() {
 	fi
 }
 
+fcheckfiles() {
+	# all configuration files are in VPNPATH
+	if [[ ! -d $VPNPATH ]]; then
+		mkdir -p $VPNPATH
+	fi
+
+	# Check for existence of credentials file.
+	if [[ ! -f $VPNPATH/pass.txt && ! -f $VPNPATH/pass.enc ]];then
+		local USERNAME PASSWORD
+		read -p "$PROMPT Please enter your username: " USERNAME
+		read -sp "$PROMPT Please enter your password: " PASSWORD
+		echo -e "$USERNAME\n$PASSWORD" > $VPNPATH/pass.txt
+		chmod 400 $VPNPATH/pass.txt
+		echo
+	fi
+
+	# check servers list
+	if [[ ! -f $VPNPATH/servers.txt ]]; then
+		fupdate
+	fi
+
+}
 
 						# Colour codes for terminal.
 BOLD=$(tput bold)
@@ -719,21 +741,9 @@ UPDATEOUTPUT=0
 ENCRYPT=0
 CREDS=0
 
-
 f_check_root || exit 1
 f_check_dependencies
-
-if [ ! -d $VPNPATH ];then mkdir -p $VPNPATH;fi
-
-						# Check for existence of credentials file.
-if [[ ! -f $VPNPATH/pass.txt && ! -f $VPNPATH/pass.enc ]];then
-	read -p "$PROMPT Please enter your username: " USERNAME
-	read -sp "$PROMPT Please enter your password: " PASSWORD
-	echo -e "$USERNAME\n$PASSWORD" > $VPNPATH/pass.txt
-	echo
-	chmod 400 $VPNPATH/pass.txt
-	unset USERNAME PASSWORD
-fi
+fcheckfiles
 
 while getopts "lhupnmkdfvxes:" opt
 do
@@ -755,7 +765,6 @@ do
 	esac
 done
 
-if [ ! -f $VPNPATH/servers.txt ];then fupdate;fi
 MAXSERVERS=$(cat $VPNPATH/servers.txt | wc -l)
 
 if [ $SERVERNUM -lt 1 ];then
