@@ -16,7 +16,7 @@
 
 fupdate()						# Update the PIA openvpn files.
 {
-	###  LOCAL DECLARATIONS
+	###  LOCAL DECLARATIONS ###
 	##
 	#
 
@@ -38,10 +38,38 @@ fupdate()						# Update the PIA openvpn files.
 		"$Url/openvpn-strong-tcp.zip"
 	)
 
-	### MAIN
+	# NEWS expressions will replace OLDS in .ovpn files
+	OLDS=(
+		"auth-user-pass"
+		"crl-verify crl.rsa.2048.pem"
+		"crl-verify crl.rsa.4096.pem"
+		"ca ca.rsa.2048.crt"
+		"ca ca.rsa.4096.crt"
+		"verb 1"
+	)
+	NEWS=(
+		"auth-user-pass $VPNPATH/pass.txt"
+		"crl-verify $VPNPATH/crl.rsa.2048.pem"
+		"crl-verify $VPNPATH/crl.rsa.4096.pem"
+		"ca $VPNPATH/ca.rsa.2048.crt"
+		"ca $VPNPATH/ca.rsa.4096.crt"
+		"verb 2"
+	)
+
+	### TRAPS ###
 	##
 	#
+	err_report() {
+		local lc="$BASH_COMMAND" rc=$?
+		echo "Error on line $1 IN $2. $lc exited with code $rc."
+		echo "arg: $3"
+		trap - ERR
+	}
+	trap 'err_report $LINENO $FUNCNAME $_ && return 1' ERR
 
+	### MAIN ###
+	##
+	#
 	printf "$PROMPT $BOLD%s$RESET\n" "Server configuration update"
 
 	# Ask for protocol to use if not set yet
@@ -64,7 +92,6 @@ fupdate()						# Update the PIA openvpn files.
 			if [[ $CONFIGNUM =~ ^[0-9]$ ]] ; then
 				index=$((CONFIGNUM-1))
 				if  (( index >= 0 )) && (( index <= last_index )); then
-					DOWNURL=${Url_zip[index]}
 					printf "$INFO Selected %s.\n" "${Protocols[$index]}"
 					break
 				fi
@@ -73,38 +100,60 @@ fupdate()						# Update the PIA openvpn files.
 		done
 	fi
 
-	printf "$PROMPT Updating PIA openvpn files...\n"
 	# Download archive to temporary directory
 	TMPDIR=$(mktemp -d)
-	curl -s -S -o $TMPDIR/pia.zip $DOWNURL
-	# Stop updating if file download failed
-	if [[ $? != 0 ]]; then
+	index=$((CONFIGNUM-1))
+	DOWNURL=${Url_zip[$index]}
+	printf "$PROMPT Updating PIA openvpn files...\n"
+	# check files exists before downloading
+	if (curl -s -S -o /dev/null --head --fail $DOWNURL); then
+		curl --silent -o $TMPDIR/pia.zip $DOWNURL
+	else
 		printf "$ERROR Unable to download archive from $DOWNURL.\n"
 		rm -r $TMPDIR
 		return 1
 	fi
 
+	# work in temporary directory
+	# before moving all to $VPNPATH
+	pushd . >/dev/null
+	cd $TMPDIR
+	unzip -q pia.zip && rm pia.zip
+	# save config information for auto-update
+	echo "$CONFIGNUM $DOWNURL $(curl -sI $DOWNURL | grep Last-Modified | cut -d ' ' -f 2-)" > configversion.txt
+
+	# linuxify ovpn files name
+	for FILE in *.ovpn; do
+		NEWNAME=$(tr ' ' '_' <<< $FILE)
+		[[ $NEWNAME != $FILE ]] && mv "$FILE" "$NEWNAME" &>/dev/null
+	done
+
+	# ovpn files parsing
+	for FILE in *.ovpn; do
+		# update configuration files
+		for i in ${!OLDS[@]};do
+			sed -i "s|${OLDS[$i]}|${NEWS[$i]}|g" $FILE
+		done
+		printf "auth-nocache\n"         >> $FILE
+		printf "log /var/log/pia.log\n" >> $FILE
+
+		# updating servers list
+		server="$(basename $FILE .ovpn)"
+		cname="$(cat $FILE | grep -e "^remote\s" | cut -d' ' -f2)"
+		echo "$server $cname" >> servers.txt
+	done
+
 	# remove and replace old configuration files
-	rm -rf $VPNPATH/*.ovpn $VPNPATH/servers.txt $VPNPATH/*.crt $VPNPATH/*.pem
-	mv $TMPDIR/pia.zip $VPNPATH/pia.zip
+	rm -f $VPNPATH/*.ovpn $VPNPATH/servers.txt $VPNPATH/*.crt $VPNPATH/*.pem
+	mv $TMPDIR/* $VPNPATH
+
+	# clean
+	popd >/dev/null
 	rmdir $TMPDIR
 
-	echo "$CONFIGNUM $DOWNURL $(curl -sI $DOWNURL | grep Last-Modified | cut -d ' ' -f 2-)" > $VPNPATH/configversion.txt
-	cd $VPNPATH && unzip -q pia.zip && rm pia.zip
-	cd $VPNPATH && for CONFIGFILE in *.ovpn;do mv "$CONFIGFILE" $(echo $CONFIGFILE | tr ' ' '_') &>/dev/null;done
-	OLDS=("auth-user-pass" "crl-verify crl.rsa.2048.pem" "crl-verify crl.rsa.4096.pem" "ca ca.rsa.2048.crt" "ca ca.rsa.4096.crt" "verb 1")
-	NEWS=("auth-user-pass $VPNPATH/pass.txt" "crl-verify $VPNPATH/crl.rsa.2048.pem" "crl-verify $VPNPATH/crl.rsa.4096.pem" "ca $VPNPATH/ca.rsa.2048.crt" "ca $VPNPATH/ca.rsa.4096.crt" "verb 2")
-	for CONFIGFILE in $VPNPATH/*.ovpn;do
-		CNT=0
-		for OLD in "${OLDS[@]}";do 
-			sed -i "s%$OLD%${NEWS[$CNT]}%g" $CONFIGFILE
-			((++CNT))
-		done
-		echo -e "auth-nocache\nlog /var/log/pia.log" >> $CONFIGFILE
-		echo -n $(basename $CONFIGFILE | cut -d '.' -f 1)" " >> $VPNPATH/servers.txt
-		cat $CONFIGFILE | grep .com | awk '{print $2}' >> $VPNPATH/servers.txt
-	done
-	echo -e "\r$INFO Files Updated.                     "
+	# success
+	printf "\r$INFO Files Updated.\n"
+	return 0
 }
 
 fforward()						# Forward a port.
