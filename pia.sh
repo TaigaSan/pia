@@ -305,32 +305,36 @@ fdnsrestore()						# Revert to original DNS servers.
 	echo "$INFO Restored DNS servers."
 }
 
-flist()						# List available servers.
+flist()
 {
-	if [ ! -f $VPNPATH/servers.txt ];then
-		fupdate
-	fi
-	
+	# Display a numbered list of available servers.
+	# Servers that allow port forwarding are displayes in green
+
+	local num servername cname
+	portforward=(
+		"CA_Montreal"
+		"CA_Toronto"
+		"CA_Vancouver"
+		"Czech_Republic"
+		"DE_Berlin"
+		"DE_Frankfurt"
+		"France"
+		"Israel"
+		"Romania"
+		"Spain"
+		"Sweden"
+		"Switzerland"
+		)
+
 	echo "$INFO$BOLD$GREEN Green$RESET servers allow port forwarding."
-	for i in $(seq $(cat $VPNPATH/servers.txt | wc -l));do
-		echo -n " $BOLD$RED[$RESET$i$BOLD$RED]$RESET "
-		SERVERNAME=$(cat $VPNPATH/servers.txt | head -n $i | tail -n 1 | awk '{print $1}')
-		case $SERVERNAME in
-			"CA_Montreal")    echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"CA_Toronto")     echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"CA_Vancouver")   echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"Czech_Republic") echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"DE_Berlin")      echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"DE_Frankfurt")   echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"France")         echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"Israel")         echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"Romania")        echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"Spain")          echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"Sweden")         echo $BOLD$GREEN$SERVERNAME$RESET;;
-			"Switzerland")    echo $BOLD$GREEN$SERVERNAME$RESET;;
-			*) echo $SERVERNAME;;
-		esac
-	done
+	while read num servername cname; do
+		printf " $BOLD$RED[$RESET%d$BOLD$RED]$RESET " $num
+		if [[ ${portforward[@]} =~ $servername ]]; then
+			echo $BOLD$GREEN$servername$RESET
+		else
+			echo $servername
+		fi
+	done <<< $(cat -n $VPNPATH/servers.txt)
 }
 
 fchecklog()						# Check openvpn logs to get connection state.
