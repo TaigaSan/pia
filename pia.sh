@@ -637,6 +637,15 @@ fencryptcreds()
 	cat $VPNPATH/pass.txt 2>/dev/null | openssl enc -e -aes-256-cbc -a > $VPNPATH/pass.enc && rm $VPNPATH/pass.txt && chmod 400 $VPNPATH/pass.enc
 }
 
+f_check_root() {
+	# Check if user is root.
+	if [[ $(id -u) == 0 ]]; then
+		return 0
+	else
+		echo "$ERROR Script must be run as root."
+		return 1
+	fi
+}
 
 						# Colour codes for terminal.
 BOLD=$(tput bold)
@@ -675,9 +684,8 @@ UPDATEOUTPUT=0
 ENCRYPT=0
 CREDS=0
 
-						# Check if user is root.
-if [ $(id -u) != 0 ];then echo "$ERROR Script must be run as root." && exit 1;fi
 
+f_check_root || exit 1
 						# Check for missing dependencies and install.
 if [ $(command -v pacman) ];then
 	INSTALLCMD="pacman --noconfirm -S"
