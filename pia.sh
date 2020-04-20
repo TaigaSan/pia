@@ -640,10 +640,10 @@ fencryptcreds()
 
 						# Colour codes for terminal.
 BOLD=$(tput bold)
-BLUE=$(tput setf 1)
-GREEN=$(tput setf 2)
-CYAN=$(tput setf 3)
-RED=$(tput setf 4)
+BLUE=$(tput setf 1 || tput setaf 4)
+GREEN=$(tput setf 2 || tput setaf 2)
+CYAN=$(tput setf 3 || tput setaf 6)
+RED=$(tput setf 4 || tput setaf 1)
 RESET=$(tput sgr0)
 
 INFO=" [$BOLD$GREEN*$RESET]"
