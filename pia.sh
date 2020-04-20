@@ -12,7 +12,8 @@
 ## GNU General Public License at (http://www.gnu.org/licenses/) for
 ## more details.
 
-
+# needed packages
+DEPENDENCIES=( "openvpn" "openssl" "iptables" "curl" "unzip" "whois" )
 
 fupdate()						# Update the PIA openvpn files.
 {
@@ -647,6 +648,40 @@ f_check_root() {
 	fi
 }
 
+f_check_dependencies() {
+	# Check for missing dependencies and install.
+
+	# look out for the package manager
+	pkg_managers=("pacman" "apt-get" "yum")
+	pkg_command=("pacman --noconfirm -S" "apt-get install -y" "yum install -y")
+	for n in ${!pkg_managers[@]}; do
+		app=${pkg_managers[n]}
+		if [[ $(command -v $app ) ]]; then
+			INSTALLCMD=${pkg_command[n]}
+			break
+		fi
+	done
+
+	# test dependencies and install eventually
+	for app in ${DEPENDENCIES[@]}; do
+		if [[ ! $(command -v $app ) ]]; then
+			if [[ ! -v INSTALLCMD ]]; then
+				printf "missing dependency: %s\n" "$app"
+				MISSINGDEP=1
+			else
+				printf "$INFO $app required, installing...\n"
+				$INSTALLCMD $app
+			fi
+		fi
+	done
+
+	if [ $MISSINGDEP -eq 1 ];then
+		echo "$ERROR OS not identified as arch or debian based, please install dependencies."
+		exit 1
+	fi
+}
+
+
 						# Colour codes for terminal.
 BOLD=$(tput bold)
 BLUE=$(tput setf 1 || tput setaf 4)
@@ -686,37 +721,7 @@ CREDS=0
 
 
 f_check_root || exit 1
-						# Check for missing dependencies and install.
-if [ $(command -v pacman) ];then
-	INSTALLCMD="pacman --noconfirm -S"
-elif [ $(command -v apt-get) ];then
-	INSTALLCMD="apt-get install -y"
-elif [ $(command -v yum) ];then
-	INSTALLCMD="yum install -y"
-else
-	UNKNOWNOS=1
-fi
-
-if [ $UNKNOWNOS -eq 1 ];then
-	command -v openvpn >/dev/null 2>&1 || MISSINGDEP=1
-	command -v openssl >/dev/null 2>&1 || MISSINGDEP=1
-	command -v iptables >/dev/null 2>&1 || MISSINGDEP=1
-	command -v curl >/dev/null 2>&1 || MISSINGDEP=1
-	command -v unzip >/dev/null 2>&1 || MISSINGDEP=1
-	command -v whois >/dev/null 2>&1 || MISSINGDEP=1
-	if [ $MISSINGDEP -eq 1 ];then
-		echo "$ERROR OS not identified as arch or debian based, please install openvpn, openssl, iptables, curl, whois and unzip and run script again."
-		exit 1
-	fi
-else
-	command -v openvpn >/dev/null 2>&1 || { echo >&2 "$INFO openvpn required, installing...";$INSTALLCMD openvpn; }
-	command -v openssl >/dev/null 2>&1 || { echo >&2 "$INFO openssl required, installing...";$INSTALLCMD openssl; }
-	command -v iptables >/dev/null 2>&1 || { echo >&2 "$INFO iptables required, installing...";$INSTALLCMD iptables; }
-	command -v curl >/dev/null 2>&1 || { echo >&2 "$INFO curl required, installing...";$INSTALLCMD curl; }
-	command -v unzip >/dev/null 2>&1 || { echo >&2 "$INFO unzip required, installing...";$INSTALLCMD unzip; }
-	command -v whois >/dev/null 2>&1 || { echo >&2 "$INFO whois required, installing...";$INSTALLCMD whois; }
-fi
-
+f_check_dependencies
 
 if [ ! -d $VPNPATH ];then mkdir -p $VPNPATH;fi
 
