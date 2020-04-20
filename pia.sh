@@ -638,7 +638,7 @@ fencryptcreds()
 	cat $VPNPATH/pass.txt 2>/dev/null | openssl enc -e -aes-256-cbc -a > $VPNPATH/pass.enc && rm $VPNPATH/pass.txt && chmod 400 $VPNPATH/pass.enc
 }
 
-f_check_root() {
+fcheckroot() {
 	# Check if user is root.
 	if [[ $(id -u) == 0 ]]; then
 		return 0
@@ -648,7 +648,7 @@ f_check_root() {
 	fi
 }
 
-f_check_dependencies() {
+fcheckdependencies() {
 	# Check for missing dependencies and install.
 
 	# look out for the package manager
@@ -741,8 +741,8 @@ UPDATEOUTPUT=0
 ENCRYPT=0
 CREDS=0
 
-f_check_root || exit 1
-f_check_dependencies
+fcheckroot || exit 1
+fcheckdependencies
 fcheckfiles
 
 while getopts "lhupnmkdfvxes:" opt
