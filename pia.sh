@@ -708,6 +708,23 @@ fcheckfiles() {
 
 }
 
+fparsecommandline()
+{
+	# parse command line arguments
+	parsed_args=$(getopt \
+	--options lhupnmkdfevxs: \
+	--long list-servers,help,update,port-forward,mace,killswitch,dns,firewall,flan,verbose,encrypt,server: \
+	--name $PNAME -- "$@")
+	if [[ $? != 0 ]]; then
+		error "terminating"
+		return 1
+	else
+		eval set -- "$parsed_args"
+	fi
+}
+
+# GLOBALS DECLARATIONS
+PNAME=$0
 						# Colour codes for terminal.
 BOLD=$(tput bold)
 BLUE=$(tput setf 1 || tput setaf 4)
@@ -749,27 +766,42 @@ fcheckroot || exit 1
 fcheckdependencies
 fcheckfiles
 
-while getopts "lhupnmkdfvxes:" opt
-do
-	case $opt in
-		l) flist;exit 0;;
-		h) fhelp;exit 0;;
-		u) fupdate;;
-		p) PORTFORWARD=1;;
-		n) fnewport;;
-		m) MACE=1;DNS=1;;
-		k) KILLS=1;FIREWALL=1;;
-		d) DNS=1;;
-		f) FIREWALL=1;;
-		e) FLAN=1;FIREWALL=1;;
-		v) VERBOSE=1;fgetip&;;
-		x) ENCRYPT=1;;
-		s) SERVERNUM=$OPTARG;;
-		*) echo "$ERROR Error: Unrecognized arguments.";fhelp;exit 1;;
+# use getopt to parse command line parameters
+fparsecommandline $@ || exit 1
+# loop through arguments
+while true; do
+	case "$1" in
+	-l | --list-servers)
+		flist; exit 0 ;;
+	-h | --help)
+		fhelp; exit 0;;
+	-u | --update)
+		fupdate;;
+	-p | --port-forward)
+		ORTFORWARD=1;;
+	-n | --new-port)
+		fnewport;;
+	-m | --pia-mace)
+		MACE=1;DNS=1;;
+	-k | --kill-switch)
+		KILLS=1;FIREWALL=1;;
+	-d | --dns)
+		DNS=1;;
+	-f | --firewall)
+		FIREWALL=1;;
+	-e | --allow-lan)
+		FLAN=1;FIREWALL=1;;
+	-v | --verbose)
+		VERBOSE=1;fgetip&;;
+	-x | --encrypt)
+		ENCRYPT=1;;
+	-s | --server )
+		SERVERNUM=$OPTARG;;
+	*) break;;
 	esac
 done
-
 MAXSERVERS=$(cat $VPNPATH/servers.txt | wc -l)
+
 
 if [ $SERVERNUM -lt 1 ];then
 	echo "$PROMPT Please choose a server: "
