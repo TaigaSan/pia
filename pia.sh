@@ -233,26 +233,30 @@ flockdown()
 
 fhelp()						# Help function.
 {
-	echo """Usage: $(basename $0) [options]
+	cat <<-EOF
 
-	-s	- Server number to connect to.
-	-l	- List available servers.
-	-u	- Update PIA openvpn files before connecting.
-	-p	- Forward a port.
-	-n	- Change to another random port.
-	-d	- Change DNS servers to PIA.
-	-f	- Enable firewall to block all non tunnel traffic.
-	-e	- Allow LAN through firewall.
-	-m	- Enable PIA MACE ad blocking.
-	-k	- Enable internet killswitch.
-	-x	- Encrypt the credetials file.
-	-v	- Display verbose information.
-	-h	- Display this help.
+	Usage:
+	 $PNAME [options]
 
-	Examples: 
-	pia -dps 6  	- Change DNS, forward a port and connect to CA_Montreal.
-	pia -nfv	- Forward a new port, run firewall and be verbose.
-"""
+	Options:
+	 -d, --dns          change DNS servers to PIA.
+	 -e, --allow-lan    allow LAN through firewall.
+	 -f, --firewall     enable firewall to block all non tunnel traffic.
+	 -h, --help         display this help.
+	 -l, --list-servers list available servers.
+	 -k, --killswitch   enable internet killswitch.
+	 -m, --pia-mace     enable PIA MACE ad blocking.
+	 -n, --new-port     change to another random port.
+	 -p, --port-forward forward a port.
+	 -s, --server       server number to connect to.
+	 -u, --update       update PIA openvpn files before connecting.
+	 -v, --verbose      display verbose information.
+	 -x, --encrypt      encrypt the credentials file.
+
+	Examples:
+	 pia -dps 6    -->  change DNS, forward a port and connect to CA_Montreal.
+	 pia -nfv	   -->  forward a new port, run firewall and be verbose.
+	EOF
 }
 
 fvpnreset()						# Restore all settings and exit openvpn gracefully.
