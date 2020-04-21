@@ -248,7 +248,7 @@ fhelp()						# Help function.
 	 -m, --pia-mace     enable PIA MACE ad blocking.
 	 -n, --new-port     change to another random port.
 	 -p, --port-forward forward a port.
-	 -s, --server       server number to connect to.
+	 -s, --server <num> connect to server number "num". See list-servers for number.
 	 -u, --update       update PIA openvpn files before connecting.
 	 -v, --verbose      display verbose information.
 	 -x, --encrypt      encrypt the credentials file.
@@ -717,7 +717,7 @@ fparsecommandline()
 	# parse command line arguments
 	parsed_args=$(getopt \
 	--options lhupnmkdfevxs: \
-	--long list-servers,help,update,port-forward,mace,killswitch,dns,firewall,flan,verbose,encrypt,server: \
+	--long list-servers,help,update,port-forward,mace,killswitch,dns,firewall,allow-lan,verbose,encrypt,server: \
 	--name $PNAME -- "$@")
 	if [[ $? != 0 ]]; then
 		error "terminating"
@@ -774,34 +774,49 @@ fcheckfiles
 fparsecommandline $@ || exit 1
 # loop through arguments
 while true; do
+	echo $1
+	echo $2
 	case "$1" in
 	-l | --list-servers)
 		flist; exit 0 ;;
 	-h | --help)
 		fhelp; exit 0;;
 	-u | --update)
-		fupdate;;
+		fupdate
+		shift;;
 	-p | --port-forward)
-		ORTFORWARD=1;;
+		PORTFORWARD=1
+		shift;;
 	-n | --new-port)
-		fnewport;;
+		fnewport
+		shift;;
 	-m | --pia-mace)
-		MACE=1;DNS=1;;
+		MACE=1; DNS=1
+		shift;;
 	-k | --kill-switch)
-		KILLS=1;FIREWALL=1;;
+		KILLS=1; FIREWALL=1
+		shift;;
 	-d | --dns)
-		DNS=1;;
+		DNS=1
+		shift;;
 	-f | --firewall)
-		FIREWALL=1;;
+		FIREWALL=1
+		shift;;
 	-e | --allow-lan)
-		FLAN=1;FIREWALL=1;;
+		FLAN=1; FIREWALL=1
+		shift;;
 	-v | --verbose)
-		VERBOSE=1;fgetip&;;
+		VERBOSE=1; fgetip&
+		shift;;
 	-x | --encrypt)
-		ENCRYPT=1;;
+		ENCRYPT=1
+		shift;;
 	-s | --server )
-		SERVERNUM=$OPTARG;;
-	*) break;;
+		SERVERNUM=$2
+		shift 2;;
+	'') break;;
+	*)  printf "unknown option $1\n"
+		exit 1;;
 	esac
 done
 MAXSERVERS=$(cat $VPNPATH/servers.txt | wc -l)
